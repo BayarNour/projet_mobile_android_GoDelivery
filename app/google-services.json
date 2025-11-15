@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1063863564660",
+    "project_id": "projet-mobile-c7600",
+    "storage_bucket": "projet-mobile-c7600.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1063863564660:android:d57152213225e410f89421",
+        "android_client_info": {
+          "package_name": "tn.isetn.projet_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBI1HHjuYZMQ3XXU9rqZrNRtNlzr3MjZlY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

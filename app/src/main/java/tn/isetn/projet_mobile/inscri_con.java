@@ -1,5 +1,6 @@
 package tn.isetn.projet_mobile;
 
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -12,14 +13,24 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.google.firebase.firestore.FirebaseFirestore;
+
 public class inscri_con extends AppCompatActivity {
 
-    EditText nom, email, pwd, confirmPwd;
-    Button btnInscrire, btnClient, btnLivreur;
+    FirebaseFirestore firestore;
 
-    // Switch interface
+    // Champs inscription
+    EditText nom, email, pwd, confirmPwd;
+
+    // Champs connexion
+    EditText inputEmailLogin, inputPasswordLogin;
+
+    // Boutons
+    Button btnInscrire, btnClient, btnLivreur;
+    Button btnGoInscription, btnGoConnexion, btnConnecter;
+
+    // Layouts
     LinearLayout layoutInscription, layoutConnexion;
-    Button btnGoInscription, btnGoConnexion;
 
     boolean isClient = true; // par défaut Client
 
@@ -28,30 +39,35 @@ public class inscri_con extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.inscri_con);
 
-        // Champs
+        // Initialiser Firestore
+        firestore = FirebaseFirestore.getInstance();
+
+        // Champs Inscription
         nom = findViewById(R.id.inputNom);
         email = findViewById(R.id.inputEmail);
         pwd = findViewById(R.id.inputPassword);
         confirmPwd = findViewById(R.id.inputConfirmPassword);
 
-        // Boutons rôle
+        // Champs Connexion
+        inputEmailLogin = findViewById(R.id.inputEmailLogin);
+        inputPasswordLogin = findViewById(R.id.inputPasswordLogin);
+
+        // Boutons
+        btnInscrire = findViewById(R.id.btnInscrire);
         btnClient = findViewById(R.id.btnClient);
         btnLivreur = findViewById(R.id.btnLivreur);
-        btnInscrire = findViewById(R.id.btnInscrire);
-
-        // Layouts inscription / connexion
-        layoutInscription = findViewById(R.id.layoutInscription);
-        layoutConnexion = findViewById(R.id.layoutConnexion);
-
-        // Boutons switch
         btnGoInscription = findViewById(R.id.btnGoInscription);
         btnGoConnexion = findViewById(R.id.btnGoConnexion);
+        btnConnecter = findViewById(R.id.btnConnecter);
+
+        // Layouts
+        layoutInscription = findViewById(R.id.layoutInscription);
+        layoutConnexion = findViewById(R.id.layoutConnexion);
 
         // Affichage par défaut
         layoutInscription.setVisibility(View.VISIBLE);
         layoutConnexion.setVisibility(View.GONE);
 
-        // Initial UI update
         updateSelectionUI();
 
         // Switch vers Inscription
@@ -89,11 +105,14 @@ public class inscri_con extends AppCompatActivity {
             updateSelectionUI();
         });
 
-        // Validation
+        // Inscription
         btnInscrire.setOnClickListener(v -> validateForm());
+
+        // Connexion
+        btnConnecter.setOnClickListener(v -> loginUser());
     }
 
-    // Met à jour UI du rôle
+    // Met à jour l'UI du rôle Client/Livreur
     private void updateSelectionUI() {
         Drawable selected = ContextCompat.getDrawable(this, R.drawable.selected_tab);
         Drawable unselected = ContextCompat.getDrawable(this, R.drawable.unselected_tab);
@@ -113,81 +132,85 @@ public class inscri_con extends AppCompatActivity {
         }
     }
 
-    // Validation complète
-    void validateForm() {
+    // Validation et inscription
+    private void validateForm() {
         String sNom = nom.getText().toString().trim();
         String sEmail = email.getText().toString().trim();
         String sPwd = pwd.getText().toString().trim();
         String sConfirm = confirmPwd.getText().toString().trim();
 
-        // 💠 1 — Nom : min 5 caractères
-        if (sNom.isEmpty()) {
-            nom.setError("Veuillez entrer votre nom");
-            return;
-        }
-        if (sNom.length() < 5) {
-            nom.setError("Le nom doit contenir minimum 5 caractères");
-            return;
-        }
+        // Validations
+        if (sNom.isEmpty()) { nom.setError("Veuillez entrer votre nom"); return; }
+        if (sNom.length() < 5) { nom.setError("Le nom doit contenir minimum 5 caractères"); return; }
 
-        // 💠 2 — Email
-        if (sEmail.isEmpty()) {
-            email.setError("Veuillez entrer un email");
-            return;
-        }
-
-        // doit contenir '@'
-        if (!sEmail.contains("@")) {
-            email.setError("Email invalide : '@' manquant");
-            return;
-        }
+        if (sEmail.isEmpty()) { email.setError("Veuillez entrer un email"); return; }
+        if (!sEmail.contains("@")) { email.setError("Email invalide : '@' manquant"); return; }
 
         String beforeAt = sEmail.substring(0, sEmail.indexOf("@"));
-
-        // texte avant @ obligatoire
-        if (beforeAt.isEmpty()) {
-            email.setError("Avant '@' vous devez écrire quelque chose");
-            return;
-        }
-
-        // minimum 5 caractères avant le @
-        if (beforeAt.length() < 5) {
-            email.setError("Avant '@' il faut minimum 5 caractères");
-            return;
-        }
-
-        // Vérification Android REGEX
+        if (beforeAt.isEmpty()) { email.setError("Avant '@' vous devez écrire quelque chose"); return; }
+        if (beforeAt.length() < 5) { email.setError("Avant '@' il faut minimum 5 caractères"); return; }
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(sEmail).matches()) {
             email.setError("Format email invalide");
             return;
         }
 
-        // 💠 3 — Mot de passe fort
-        if (sPwd.length() < 8) {
-            pwd.setError("Mot de passe : minimum 8 caractères");
-            return;
-        }
-        if (!sPwd.matches(".*[A-Z].*")) {
-            pwd.setError("Il faut au moins une lettre majuscule");
-            return;
-        }
-        if (!sPwd.matches(".*[a-z].*")) {
-            pwd.setError("Il faut au moins une minuscule");
-            return;
-        }
-        if (!sPwd.matches(".*[0-9].*")) {
-            pwd.setError("Il faut au moins un chiffre");
-            return;
-        }
+        if (sPwd.length() < 8) { pwd.setError("Minimum 8 caractères"); return; }
+        if (!sPwd.matches(".*[A-Z].*")) { pwd.setError("Une majuscule requise"); return; }
+        if (!sPwd.matches(".*[a-z].*")) { pwd.setError("Une minuscule requise"); return; }
+        if (!sPwd.matches(".*[0-9].*")) { pwd.setError("Un chiffre requis"); return; }
 
-        // 💠 4 — Confirmation
         if (!sPwd.equals(sConfirm)) {
             confirmPwd.setError("Les mots de passe ne correspondent pas");
             return;
         }
 
-        // ✔ Tout est correct
+        // Créer l'objet User
         String role = isClient ? "Client" : "Livreur";
-        Toast.makeText(this, "Compte " + role + " créé avec succès !", Toast.LENGTH_LONG).show();
+        User user = new User(sNom, sEmail, role, sPwd);
+
+        // Enregistrer dans Firestore
+        firestore.collection("users")
+                .document(sEmail) // ID unique = email
+                .set(user)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(inscri_con.this, "Inscription réussie !", Toast.LENGTH_SHORT).show();
+                    Intent i = new Intent(inscri_con.this, delivery_map.class);
+                    startActivity(i);
+                    finish();
+                })
+                .addOnFailureListener(e -> Toast.makeText(inscri_con.this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    // Connexion utilisateur
+    private void loginUser() {
+        String sEmail = inputEmailLogin.getText().toString().trim();
+        String sPwd = inputPasswordLogin.getText().toString().trim();
+
+        if (sEmail.isEmpty()) {
+            inputEmailLogin.setError("Veuillez entrer un email");
+            return;
+        }
+        if (sPwd.isEmpty()) {
+            inputPasswordLogin.setError("Veuillez entrer un mot de passe");
+            return;
+        }
+
+        firestore.collection("users").document(sEmail).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        String storedPassword = documentSnapshot.getString("password");
+                        if (storedPassword != null && storedPassword.equals(sPwd)) {
+                            Toast.makeText(inscri_con.this, "Connexion réussie !", Toast.LENGTH_SHORT).show();
+                            Intent i = new Intent(inscri_con.this, delivery_map.class);
+                            startActivity(i);
+                            finish();
+                        } else {
+                            inputPasswordLogin.setError("Mot de passe incorrect");
+                        }
+                    } else {
+                        inputEmailLogin.setError("Utilisateur non trouvé");
+                    }
+                })
+                .addOnFailureListener(e -> Toast.makeText(inscri_con.this, "Erreur : " + e.getMessage(), Toast.LENGTH_SHORT).show());
     }
 }
