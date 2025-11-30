@@ -32,6 +32,9 @@
         </activity>
 
         <activity android:name=".delivery_map" />
+        <activity android:name=".ProfileActivity" />
+        <activity android:name=".CreateOrderActivity"/>
+
     </application>
 
 </manifest>
